@@ -41,7 +41,27 @@ int main(int argc, char *argv[]){
     }
   }
 
-  printf("options are:\np = %d\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d", options.p, options.s, options.U, options.S, options.v, options.c);
+  FILE *fp;
+
+  fp = fopen("/proc/11/stat", "r");
+
+  //error checking on open
+      if (fp == NULL){
+        printf("%s", "Error opening specified files. Exiting program.");
+        return 1;
+      }
+  
+  char line[150];
+
+  while (!feof(fp)){
+	  fgets(line, 150, fp);
+	  puts(line);
+  }
+
+  fclose(fp);
+
+  printf("options are:\np = %d\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d\n", options.p, options.s, options.U, options.S, options.v, options.c);
   return 0;
 
 }
+
