@@ -7,8 +7,9 @@ struct Flags{
   int s;
   int U;
   int S;
-  int v;
+    int v;
   int c;
+  char *PID;
 } options;
 
 int main(int argc, char *argv[]){
@@ -19,13 +20,15 @@ int main(int argc, char *argv[]){
   options.S = 0;
   options.v = 0;
   options.c = 0;
+  options.PID = "";
 
   int flag;
 
-  while ((flag = getopt(argc, argv, "psUSvc")) != -1){
+  while ((flag = getopt(argc, argv, "p:sUSvc")) != -1){
     switch (flag){
 
       case 'p' : options.p = 1;
+      options.PID = optarg;
       break;
       case 's' : options.s = 1;
       break;
@@ -50,18 +53,17 @@ int main(int argc, char *argv[]){
         printf("%s", "Error opening specified files. Exiting program.");
         return 1;
       }
-  
+
   char line[150];
 
   while (!feof(fp)){
-	  fgets(line, 150, fp);
-	  puts(line);
+          fgets(line, 150, fp);
+          puts(line);
   }
 
   fclose(fp);
 
-  printf("options are:\np = %d\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d\n", options.p, options.s, options.U, options.S, options.v, options.c);
+  printf("options are:\np = %d\nPID = %s\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d\n", options.p, options.PID, options.s, options.U, options.S, options.v, options.c);
   return 0;
 
 }
-
