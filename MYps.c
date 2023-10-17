@@ -16,6 +16,8 @@ char *catCmdline(const char *pid);
 //functions for displaying the various options
 void dispCMD(const char *pid);
 void dispState(const char *pid);
+void dispUtime(const char *pid);
+void dispStime(const char *pid);
 
 //struct for the flag options from command line
 struct Flags{
@@ -95,6 +97,8 @@ int main(int argc, char *argv[]){
   dispCMD(options.PID);
   puts("");
   dispState(options.PID);
+  puts("");
+  dispUtime(options.PID);
 
   // printf("options are:\np = %d\nPID = %s\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d\n", options.p, options.PID, options.s, options.U, options.S, options.v, options.c);
   // return 0;
@@ -134,6 +138,7 @@ void dispCMD(const char *pid){
   char buf[1024];
 
   //reading from cmdline
+  printf("%s", "cmdline: ");
   int fp = open(path, O_RDONLY);
   //getting length of file
   size_t length = read(fp, buf, sizeof (buf));
@@ -177,6 +182,60 @@ void dispState(const char *pid){
   }
 
   //prints the token
-  printf("%s", token);
+  printf("State: %s", token);
+
+}
+
+void dispUtime(const char *pid){
+
+  //using catStat function to get file path for stat file
+  char *path = catStat(pid);
+  //creating a buffer to read the file into
+  char buf[1024];
+
+  //reading from stat
+  int fp = open(path, O_RDONLY);
+  //reading file
+  read(fp, buf, sizeof (buf));
+  //closing file
+  close (fp);
+
+  //creating a token strings to parse through the stat file 
+  char *token = strtok(buf, " ");
+
+  //because the state is always the 3rd, this goes through 3 times
+  for (size_t i = 0; i < 13; i++){
+    token = (strtok(NULL, " "));
+  }
+
+  //prints the token
+  printf("Utime: %s", token);
+
+}
+
+void dispStime(const char *pid){
+
+  //using catStat function to get file path for stat file
+  char *path = catStat(pid);
+  //creating a buffer to read the file into
+  char buf[1024];
+
+  //reading from stat
+  int fp = open(path, O_RDONLY);
+  //reading file
+  read(fp, buf, sizeof (buf));
+  //closing file
+  close (fp);
+
+  //creating a token strings to parse through the stat file 
+  char *token = strtok(buf, " ");
+
+  //because the state is always the 3rd, this goes through 3 times
+  for (size_t i = 0; i < 14; i++){
+    token = (strtok(NULL, " "));
+  }
+
+  //prints the token
+  printf("Utime: %s", token);
 
 }
