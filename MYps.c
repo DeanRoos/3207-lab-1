@@ -22,8 +22,10 @@ void dispState(const char *pid);
 void dispUtime(const char *pid);
 void dispStime(const char *pid);
 void dispVmem(const char *pid);
-int isDir(struct dirent *dir);
-int getUID(const char *pid);
+
+//functions for checking if folder is a process and getting uid of process
+int isProc(struct dirent *dir);
+int myGetUID(const char *pid);
 
 //struct for the flag options from command line
 struct Flags{
@@ -49,7 +51,7 @@ int main(int argc, char *argv[]){
 
   int flag;
 
-  //looping through args tyo find flags
+  //looping through args to find flags
   while ((flag = getopt(argc, argv, "p:sUSvc")) != -1){
     switch (flag){
 
@@ -74,58 +76,87 @@ int main(int argc, char *argv[]){
     }
   }
 
-  //creating file
-  FILE *fp;
+  //Starting with no -p flag
 
-  //opting proc folder
-  fp = fopen("/proc", "r");
+  if (options.p == 0){
 
-  //error checking on open
-  if (fp == NULL){
-    printf("%s", "Error opening specified files. Exiting program.");
-    return 1;
+  //creating directory parsing 
+  DIR *directory;
+  struct dirent *d;
+  directory = opendir("/proc");
+
+  //looping through all directories in proc folder
+  while ((d = readdir(directory))) {
+    //checking to make sure the folder is a proccess using my function
+    if (!isProc(d)){
+      continue;
+    }
+
+    //checking to see if uid matches my uid, if so I print the process id
+    if (myGetUID(d->d_name) == getuid()){
+
+      //printing pid
+      printf("%s ", d->d_name);
+
+      //checking each option for whether it should display then calling the display
+      //function for that option.
+      if (options.s == 1){
+        dispState(d->d_name);
+      }
+      if (options.U == 0){
+        dispUtime(d->d_name);
+      }
+      if (options.S == 1){
+        dispStime(d->d_name);
+      }
+      if (options.v == 1){
+        dispVmem(d->d_name);
+      }
+      if (options.c == 0){
+        dispCMD(d->d_name);
+      }
+      puts("");
+
+    }
+
   }
 
-  //struct dirent *dir;
+  //closing directory
+  closedir(directory);
 
-  //while ((dir = readdir(fp))) {
-    //if (!isDir(dir)){
-      //continue;
-    //}
+  }
 
-  //}
+  //now if there is -p option
 
-  //printing commands no -p argument
+  if (options.p == 1){
 
-  printf("\nUIDHERE: %d\n", getUID(options.PID));
+    //printing pid
+      printf("%s ", options.PID);
 
-  char *newName = catStat(options.PID);
-  printf("%s", newName);
-  newName = catStatm(options.PID);
-  printf("%s", newName);
-  newName = catCmdline(options.PID);
-  printf("%s", newName);
-  free(newName);
+      //checking each option for whether it should display then calling the display
+      //function for that option.
+      if (options.s == 1){
+        dispState(options.PID);
+      }
+      if (options.U == 0){
+        dispUtime(options.PID);
+      }
+      if (options.S == 1){
+        dispStime(options.PID);
+      }
+      if (options.v == 1){
+        dispVmem(options.PID);
+      }
+      if (options.c == 0){
+        dispCMD(options.PID);
+      }
+      puts("");
 
-  printf("%d\n", getuid());
-
-  fclose(fp);
-
-  dispCMD(options.PID);
-  puts("");
-  dispState(options.PID);
-  puts("");
-  dispUtime(options.PID);
-  puts("");
-  dispStime(options.PID);
-  puts("");
-  dispVmem(options.PID);
-
-  // printf("options are:\np = %d\nPID = %s\ns = %d\nU = %d\nS = %d\nv = %d\nc = %d\n", options.p, options.PID, options.s, options.U, options.S, options.v, options.c);
-  // return 0;
+  }
 
 }
 
+//function to get path to stat file of specific pid
 char *catStat(const char *pid) {
 	char *ret = malloc(strlen(pid) + 12);
 	strcpy(ret, "/proc/");
@@ -134,6 +165,7 @@ char *catStat(const char *pid) {
 	return ret; //returning
 }
 
+//function to get path to statm file of specific pid
 char *catStatm(const char *pid) {
 	char *ret = malloc(strlen(pid) + 13);
 	strcpy(ret, "/proc/");
@@ -142,6 +174,7 @@ char *catStatm(const char *pid) {
 	return ret; //returning
 }
 
+//function to get path to cmdline file of specific pid
 char *catCmdline(const char *pid) {
 	char *ret = malloc(strlen(pid) + 15);
 	strcpy(ret, "/proc/");
@@ -150,6 +183,7 @@ char *catCmdline(const char *pid) {
 	return ret; //returning
 }
 
+//functino to get path to status file of specific pid
 char *catStatus(const char *pid) {
 	char *ret = malloc(strlen(pid) + 14);
 	strcpy(ret, "/proc/");
@@ -166,8 +200,7 @@ void dispCMD(const char *pid){
   //creating a buffer array to hold content of /proc/<pid>/cmdline
   char buf[1024];
 
-  //reading from cmdline
-  printf("%s", "cmdline: ");
+  //oping mcdline file
   int fp = open(path, O_RDONLY);
 
   //error checking on open
@@ -176,7 +209,7 @@ void dispCMD(const char *pid){
     exit(1);
   }
 
-  //getting length of file
+  //getting length of file and reading file into buffer
   size_t length = read(fp, buf, sizeof (buf));
   //closing file
   close(fp);
@@ -189,7 +222,7 @@ void dispCMD(const char *pid){
   //looping through the file and printing each null-terminated string 
   arg = buf;
   while (arg < buf + length) {
-    printf ("%s\n", arg);
+    printf ("%s", arg);
     arg += strlen(arg) + 1;
   }
 
@@ -227,7 +260,7 @@ void dispState(const char *pid){
   }
 
   //prints the token
-  printf("State: %s", token);
+  printf("%s ", token);
 
   free(path);
 
@@ -262,7 +295,7 @@ void dispUtime(const char *pid){
   }
 
   //prints the token
-  printf("Utime: %s", token);
+  printf("utime=%s ", token);
 
   free(path);
 
@@ -275,7 +308,7 @@ void dispStime(const char *pid){
   //creating a buffer to read the file into
   char buf[1024];
 
-  //reading from stat
+  //opening file
   int fp = open(path, O_RDONLY);
   //error checking on open
   if (fp == -1){
@@ -296,7 +329,7 @@ void dispStime(const char *pid){
   }
 
   //prints the token
-  printf("Stime: %s", token);
+  printf("stime=%s ", token);
 
   free(path);
 
@@ -309,7 +342,7 @@ void dispVmem(const char *pid){
   //creating a buffer to read the file into
   char buf[1024];
 
-  //reading from stat
+  //opening file
   int fp = open(path, O_RDONLY);
   //error checking on open
   if (fp == -1){
@@ -326,17 +359,18 @@ void dispVmem(const char *pid){
   char *token = strtok(buf, " ");
 
   //prints the token
-  printf("Virtual memory: %s", token);
+  printf("vmem=%s ", token);
 
   free(path);
 
 }
 
 //function to check if the name of a folder in /proc is a number
-int isDir(struct dirent *dir) {
+int isProc(struct dirent *dir) {
   
   char *p;
 
+  //loops through each character of the d_name and returns false if it finds a non-digit
   for (p = dir->d_name; *p; p++) {
     if (!isdigit(*p))
       return 0;
@@ -345,72 +379,48 @@ int isDir(struct dirent *dir) {
   return 1;
 }
 
-// int getUID(const char *pid){
+int myGetUID(const char *pid){
 
-//   char *path = catStatus(pid);
-
-//   char buf[1024];
-
-//   //reading from status
-//   int fp = open(path, O_RDONLY);
-//   //error checking on open
-//   if (fp == -1){
-//     printf("%s", "Error opening specified files. Exiting program.");
-//     exit(1);
-//   }
-
-//   //reading file
-//   read(fp, buf, sizeof(buf));
-//   //closing file
-//   close(fp);
-
-//   char *uidstr = strstr(buf, "Uid:");
-
-//   char *tok = strtok(uidstr, " ");
-//   tok = strtok(NULL, " ");
-
-//   //puts(tok);
-
-//   free(path);
-
-//   return atoi(tok);
-
-// }
-
-int getUID(const char *pid){
-
+  //creating/initializing varabiles for the file, each line we tokenize,
+  //the length and for the read function
   FILE *fp;
   char *line = NULL;
   size_t len = 0;
   size_t read;
 
+  //getting path to status file using catstatus function
   char *path = catStatus(pid);
 
+  //opting file
   fp = fopen(path, "r");
 
+  //freeing memory
   free (path);
 
   //error checking on open
   if (fp == NULL){
     printf("%s", "Error opening specified files. Exiting program.");
-    return 1;
+    exit(1);
   }
 
+  //goes through each line looking for the line starting in Uid:
+  //It then tokenizes the uid and returns it as an int
   while ((read = getline(&line, &len, fp)) != -1) {
 
     if ((strstr(line, "Uid")) != NULL){
 
       char *token = strtok(line + 4, "	");
 
-      printf("\nUID HERE THIS IS IN THE FUNCTION%s", token);
+      return atoi(token);
 
     }
 
-
   }
 
+  //freeing memory
   free(line);
 
-  return 0;
+  //returning -1 on error
+  return (-1);
 
 }
